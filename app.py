@@ -242,10 +242,11 @@ def remove_stopwords(text):
     return ' '.join(filtered_words)
 
 # 임베딩을 생성하는 함수
-def get_bert_embedding(text):
+def get_bert_embedding(text, tokenizer, bert_model):
     try:
         inputs = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-        inputs.to(device)  # 입력 데이터를 GPU로 이동
+
+        # GPU를 사용하지 않도록 수정
         outputs = bert_model(**inputs)
 
         # 여기서는 모든 토큰의 임베딩의 평균을 사용하지만, 다른 방법도 가능
@@ -256,9 +257,9 @@ def get_bert_embedding(text):
         count = torch.clamp(mask.sum(1), min=1e-9)
         mean_pooled = summed / count
 
-        return mean_pooled[0].detach().cpu().numpy()  # 결과를 CPU로 이동
+        return mean_pooled[0].detach().numpy()  # 결과를 CPU에서 반환
     except Exception as e:
-        print("get_bert_embedding_An error occurred:", e)
+        print("get_bert_embedding: An error occurred:", e)
     
 def get_top_five(title_acc, keyword):
     
@@ -310,11 +311,9 @@ def youtubeNewsRelated():
                 
             final_urls = crawl_urls(keyword)
             print("★url 목록들 받아오기 완료\n")
-            print("final_urls: ", final_urls)
             
             news_titles, news_contents, news_dates = crawl_news(final_urls)  
             print("★크롤링 완료\n")
-            print("news_titles : ", news_titles)
             
             date_dict = dict(zip(news_titles, news_dates)) 
             
@@ -344,6 +343,8 @@ def youtubeNewsRelated():
 
                 curr_title_acc[title] = curr_predictions
                 curr_title_embedding[title] = curr_input_embedding
+            print("curr_title_acc: ", curr_title_acc)
+            print("curr_title_embedding: ", curr_title_embedding)
             print("★curr ... 신뢰도 예측 완료\n")
             
             # for title in rel_result_dict.keys():
