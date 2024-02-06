@@ -344,8 +344,6 @@ def youtubeNewsRelated():
 
                 curr_title_acc[title] = curr_predictions
                 curr_title_embedding[title] = curr_input_embedding
-            print("curr_title_acc: ", curr_title_acc)
-            print("curr_title_embedding: ", curr_title_embedding)
             print("★curr ... 신뢰도 예측 완료\n")
             
             # for title in rel_result_dict.keys():
@@ -371,6 +369,10 @@ def youtubeNewsRelated():
             # 결과 출력
             curr_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(curr_sorted_combined_scores)[:5]]
             # rel_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(rel_sorted_combined_scores)[:5]]
+            
+            for news in curr_top_5_combined:
+                print(news["title"])
+                print(news["article"])
             
             result = {"curr_youtube_news" : curr_top_5_combined,
                     # "rel_youtube_news" : rel_top_5_combined
