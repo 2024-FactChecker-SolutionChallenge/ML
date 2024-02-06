@@ -306,14 +306,20 @@ def youtubeNewsRelated():
             elif type(data_dict) == list:
                 keyword = data_dict[0]["keyword"]
                 
+            print("★제목, 업로드 날짜, 대본, 키워드 추출 완료\n")
+                
             final_urls = crawl_urls(keyword)
-            print("final_urls_complete")
+            print("★url 목록들 받아오기 완료\n")
+            
             news_titles, news_contents, news_dates = crawl_news(final_urls)  
+            print("★크롤링 완료\n")
             
             date_dict = dict(zip(news_titles, news_dates)) 
             
             curr_date_news_titles, curr_date_news_contents = filter_current(news_titles, news_contents, date_dict) 
+            
             rel_date_news_titles, rel_date_news_contents = filter_related(news_titles, news_contents, date_dict, upload_date_kst)
+            print("★rel ... 날짜 기반 필터링 완료\n")    
             
             curr_result_dict = dict(zip(curr_date_news_titles, curr_date_news_contents))
             rel_result_dict = dict(zip(rel_date_news_titles, rel_date_news_contents))
@@ -336,6 +342,7 @@ def youtubeNewsRelated():
 
                 curr_title_acc[title] = curr_predictions
                 curr_title_embedding[title] = curr_input_embedding
+            print("★curr ... 신뢰도 예측 완료\n")
             
             for title in rel_result_dict.keys():
                 rel_input_text = remove_stopwords(preprocess_text(title))
@@ -350,9 +357,12 @@ def youtubeNewsRelated():
 
                 rel_title_acc[title] = rel_predictions
                 rel_title_embedding[title] = rel_input_embedding
+            print("★rel ... 신뢰도 예측 완료\n")
             
             curr_sorted_combined_scores = get_top_five(curr_title_acc, keyword)
+            print("★curr ... top5 완료\n")
             rel_sorted_combined_scores = get_top_five(rel_title_acc, keyword)
+            print("★rel ... top5 완료\n")
             
             # 결과 출력
             curr_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(curr_sorted_combined_scores)[:5]]
