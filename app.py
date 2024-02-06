@@ -370,9 +370,6 @@ def youtubeNewsRelated():
             curr_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(curr_sorted_combined_scores)[:5]]
             rel_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(rel_sorted_combined_scores)[:5]]
             
-            for news in curr_top_5_combined:
-                print(news["title"])
-                print(news["article"])
             
             result = {"curr_youtube_news" : curr_top_5_combined,
                     "rel_youtube_news" : rel_top_5_combined
