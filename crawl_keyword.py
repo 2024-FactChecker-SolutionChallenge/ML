@@ -45,9 +45,9 @@ def news_attrs_crawler(articles,attrs):
 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/98.0.4758.102"}
 
 #html생성해서 기사크롤링하는 함수 만들기(url): 링크를 반환
-def articles_crawler(i, url):
+def articles_crawler(url):
     #html 불러오기
-    original_html = requests.get(i,headers=headers)
+    original_html = requests.get(url,headers=headers)
     html = BeautifulSoup(original_html.text, "html.parser")
 
     url_naver = html.select("div.group_news > ul.list_news > li div.news_area > div.news_info > div.info_group > a.info")
@@ -72,7 +72,7 @@ def crawl_urls(keyword):
     
     #뉴스 크롤러 실행
     for i in url:
-        url = articles_crawler(i,url)
+        url = articles_crawler(url)
         news_url.append(url)
 
 
