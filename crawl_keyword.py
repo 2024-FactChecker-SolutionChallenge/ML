@@ -144,6 +144,6 @@ def crawl_news(final_urls):
         except AttributeError:
             news_date = news_html.select_one("#content > div.end_ct > div > div.article_info > span > em")
 
-        return news_titles, news_contents, news_dates
+    return news_titles, news_contents, news_dates
     
     
