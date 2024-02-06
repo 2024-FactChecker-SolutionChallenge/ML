@@ -317,7 +317,7 @@ def youtubeNewsRelated():
             date_dict = dict(zip(news_titles, news_dates)) 
             
             curr_date_news_titles, curr_date_news_contents = filter_current(news_titles, news_contents, date_dict) 
-            
+            print("★curr ... 날짜 기반 필터링 완료\n") 
             rel_date_news_titles, rel_date_news_contents = filter_related(news_titles, news_contents, date_dict, upload_date_kst)
             print("★rel ... 날짜 기반 필터링 완료\n")    
             
