@@ -242,14 +242,14 @@ def remove_stopwords(text):
     return ' '.join(filtered_words)
 
 # 임베딩을 생성하는 함수
-def get_bert_embedding(text, tokenizer, bert_model):
+def get_bert_embedding(text):
     try:
         inputs = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
+        # inputs.to(device) 라인 제거 - GPU 사용하지 않음
 
-        # GPU를 사용하지 않도록 수정
         outputs = bert_model(**inputs)
 
-        # 여기서는 모든 토큰의 임베딩의 평균을 사용하지만, 다른 방법도 가능
+        # 나머지 부분은 동일하게 유지
         embeddings = outputs.last_hidden_state
         mask = inputs['attention_mask'].unsqueeze(-1).expand(embeddings.size()).float()
         masked_embeddings = embeddings * mask
@@ -257,9 +257,10 @@ def get_bert_embedding(text, tokenizer, bert_model):
         count = torch.clamp(mask.sum(1), min=1e-9)
         mean_pooled = summed / count
 
-        return mean_pooled[0].detach().numpy()  # 결과를 CPU에서 반환
+        return mean_pooled[0].detach().cpu().numpy()  # 결과를 CPU로 이동 (이미 CPU에서 실행 중이므로 필요 없으나 명시적으로 남겨둠)
     except Exception as e:
         print("get_bert_embedding: An error occurred:", e)
+
     
 def get_top_five(title_acc, keyword):
     
