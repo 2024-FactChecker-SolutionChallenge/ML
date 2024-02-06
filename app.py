@@ -310,6 +310,7 @@ def youtubeNewsRelated():
                 
             final_urls = crawl_urls(keyword)
             print("★url 목록들 받아오기 완료\n")
+            print("final_urls: ", final_urls)
             
             news_titles, news_contents, news_dates = crawl_news(final_urls)  
             print("★크롤링 완료\n")

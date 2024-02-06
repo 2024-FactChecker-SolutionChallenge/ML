@@ -71,17 +71,18 @@ def crawl_urls(keyword):
     news_url =[]
     
     #뉴스 크롤러 실행
-    for i in url:
-        url = articles_crawler(url)
-        news_url.append(url)
+    for url_item in url:
+        article_urls = articles_crawler(url_item)
+        news_url.append(article_urls)
+
 
 
     #제목, 링크, 내용 1차원 리스트로 꺼내는 함수 생성
     def makeList(newlist, content):
-        for i in content:
-            for j in i:
-                newlist.append(j)
+        for sublist in content:
+            newlist.extend(sublist)
         return newlist
+
 
 
     #제목, 링크, 내용 담을 리스트 생성
