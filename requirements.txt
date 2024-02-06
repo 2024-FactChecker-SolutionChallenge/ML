@@ -1,0 +1,19 @@
+# pip install -r requirements.txt
+
+Flask==3.0.2
+python-dotenv==0.19.2
+torch==2.1.0
+keras==2.15.0
+transformers==4.35.2
+google==2.0.3
+yt-dlp==2023.12.30
+pytube==15.0.0
+youtube-transcript-api==0.6.2
+konlpy==0.6.0
+scikit-learn==1.2.2
+beautifulsoup4==4.12.3
+pandas==1.5.3
+numpy==1.23.5
+tqdm==4.66.1
+
+
