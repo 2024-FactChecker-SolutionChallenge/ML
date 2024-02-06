@@ -313,6 +313,7 @@ def youtubeNewsRelated():
             
             news_titles, news_contents, news_dates = crawl_news(final_urls)  
             print("★크롤링 완료\n")
+            print("news_titles : ", news_titles)
             
             date_dict = dict(zip(news_titles, news_dates)) 
             
