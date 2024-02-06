@@ -15,5 +15,7 @@ beautifulsoup4==4.12.3
 pandas==1.5.3
 numpy==1.23.5
 tqdm==4.66.1
+tensorflow==2.15.0
+google-generativeai
 
 
