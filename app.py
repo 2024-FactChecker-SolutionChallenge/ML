@@ -130,7 +130,7 @@ def get_transcript(video_id):
 
 def get_keyword(title, script):
     try:
-        response = gemini_model.generate_content(title + "이 제목을 가진 유튜브 본문이 다음과 같아" + script + '이 제목 및 본문 내용을 함축하면서도 연관성이 높은, 관련된 뉴스 기사를 찾기 좋은 "1~2단어"로 된 검색어를 [ {"keyword" : ... } ] 형식으로 1개만 추출해줘')
+        response = gemini_model.generate_content(title + "이 제목을 가진 유튜브 본문이 다음과 같아" + script + '이 제목 및 본문 내용의 "핵심적인 중요한!! 내용을" 함축하면서도 연관성이 높은, 관련된 뉴스 기사를 찾기 좋은 "1~2단어"로 된 검색어를 [ {"keyword" : ... } ] 형식으로 1개만 추출해줘')
         print(response.text)
         return response.text
     except Exception as e:
@@ -369,10 +369,6 @@ def youtubeNewsRelated():
             # 결과 출력
             curr_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(curr_sorted_combined_scores)[:5]]
             # rel_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(rel_sorted_combined_scores)[:5]]
-            
-            for news in curr_top_5_combined:
-                print(news["title"])
-                print(news["article"])
             
             result = {"curr_youtube_news" : curr_top_5_combined,
                     # "rel_youtube_news" : rel_top_5_combined
