@@ -31,7 +31,6 @@ def makeUrl(search, start_pg, end_pg):
             page = makePgNum(i)
             url = "https://search.naver.com/search.naver?where=news&sm=tab_pge&query=" + search + "&start=" + str(page)
             urls.append(url)
-        print("생성url: ", urls)
         return urls
 
 # html에서 원하는 속성 추출하는 함수 만들기 (기사, 추출하려는 속성값)
