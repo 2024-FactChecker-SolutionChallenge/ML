@@ -320,16 +320,16 @@ def youtubeNewsRelated():
             
             curr_date_news_titles, curr_date_news_contents = filter_current(news_titles, news_contents, date_dict) 
             print("★curr ... 날짜 기반 필터링 완료\n") 
-            # rel_date_news_titles, rel_date_news_contents = filter_related(news_titles, news_contents, date_dict, upload_date_kst)
-            # print("★rel ... 날짜 기반 필터링 완료\n")    
+            rel_date_news_titles, rel_date_news_contents = filter_related(news_titles, news_contents, date_dict, upload_date_kst)
+            print("★rel ... 날짜 기반 필터링 완료\n")    
             
             curr_result_dict = dict(zip(curr_date_news_titles, curr_date_news_contents))
-            # rel_result_dict = dict(zip(rel_date_news_titles, rel_date_news_contents))
+            rel_result_dict = dict(zip(rel_date_news_titles, rel_date_news_contents))
             
             curr_title_acc = {}
             curr_title_embedding = {}
-            # rel_title_acc = {}
-            # rel_title_embedding = {}
+            rel_title_acc = {}
+            rel_title_embedding = {}
 
             for title in curr_result_dict.keys():
                 curr_input_text = remove_stopwords(preprocess_text(title))
@@ -346,36 +346,36 @@ def youtubeNewsRelated():
                 curr_title_embedding[title] = curr_input_embedding
             print("★curr ... 신뢰도 예측 완료\n")
             
-            # for title in rel_result_dict.keys():
-            #     rel_input_text = remove_stopwords(preprocess_text(title))
-            #     rel_input_embedding = get_bert_embedding(rel_input_text)
+            for title in rel_result_dict.keys():
+                rel_input_text = remove_stopwords(preprocess_text(title))
+                rel_input_embedding = get_bert_embedding(rel_input_text)
 
-            #     # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-            #     if len(rel_input_embedding.shape) == 1:
-            #         rel_input_embedding = np.reshape(rel_input_embedding, (1, -1))
+                # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
+                if len(rel_input_embedding.shape) == 1:
+                    rel_input_embedding = np.reshape(rel_input_embedding, (1, -1))
 
-            #     # 모델을 사용한 예측 수행
-            #     rel_predictions = acc_model.predict(rel_input_embedding)
+                # 모델을 사용한 예측 수행
+                rel_predictions = acc_model.predict(rel_input_embedding)
 
-            #     rel_title_acc[title] = rel_predictions
-            #     rel_title_embedding[title] = rel_input_embedding
-            # print("★rel ... 신뢰도 예측 완료\n")
+                rel_title_acc[title] = rel_predictions
+                rel_title_embedding[title] = rel_input_embedding
+            print("★rel ... 신뢰도 예측 완료\n")
             
             curr_sorted_combined_scores = get_top_five(curr_title_acc, keyword)
             print("★curr ... top5 완료\n")
-            # rel_sorted_combined_scores = get_top_five(rel_title_acc, keyword)
-            # print("★rel ... top5 완료\n")
+            rel_sorted_combined_scores = get_top_five(rel_title_acc, keyword)
+            print("★rel ... top5 완료\n")
             
             # 결과 출력
             curr_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(curr_sorted_combined_scores)[:5]]
-            # rel_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(rel_sorted_combined_scores)[:5]]
+            rel_top_5_combined = [{ "title" : key.strip(), "article" : curr_result_dict[key].strip() } for key in list(rel_sorted_combined_scores)[:5]]
             
             for news in curr_top_5_combined:
                 print(news["title"])
                 print(news["article"])
             
             result = {"curr_youtube_news" : curr_top_5_combined,
-                    # "rel_youtube_news" : rel_top_5_combined
+                    "rel_youtube_news" : rel_top_5_combined
                     }  # 예시 결과
             
             return jsonify(result)
