@@ -197,6 +197,7 @@ def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
                     print(f"Key: {key}, Index: {index}")
 
         term += 1  
+    return date_news_titles, date_news_contents
 
 
 # 한글이 아닌 문자 제거 함수
