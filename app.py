@@ -156,7 +156,7 @@ def filter_current(news_titles, news_contents, date_dict):
 
     while len(date_news_titles) < 8:
         for key, date in date_dict.items():
-            news_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
+            news_date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
             one_day_after = upload_date_kst + timedelta(days=(-2) * term)
             two_days_after = upload_date_kst + timedelta(days=3 * term)
 
@@ -185,7 +185,7 @@ def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
 
     while len(date_news_titles) < 8:
         for key, date in date_dict.items():
-            news_date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
+            news_date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
             one_day_after = upload_date_kst + timedelta(days=(-2) * term)
             two_days_after = upload_date_kst + timedelta(days=3 * term)
 
