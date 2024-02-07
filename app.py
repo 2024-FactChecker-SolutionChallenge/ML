@@ -416,9 +416,9 @@ def youtubeNewsRelated():
             print("An error occurred:", e)
             return jsonify({"error": str(e)}), 500
         
-@app.route('/interests', methods=['POST'])
+@app.route('/interests', methods=['GET'])
 def interests():
-    if request.method == 'POST':
+    if request.method == 'GET':
         try: 
             all_hrefs = {}
             sids = [i for i in range(100,106)]  # 분야 리스트
