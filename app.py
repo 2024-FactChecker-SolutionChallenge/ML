@@ -506,7 +506,7 @@ def feedback():
 def quiz_word():
     if request.method == 'GET':
         try:
-            response = gemini_model.generate_content('다소 어려운, 요즘 시사 뉴스에서 흔히 볼 수 있는, 시사/경제 한글어휘들 20개를 [{"딘어1" : "단어1에 대한 뜻풀이"}, {"단어2 : "단어2에 대한 뜻풀이"}, .... ] 와 같이 하나의 리스트 안에 key 값은 단어로 가지고 value 값은 뜻으로 가지는 형태로 반환해줘. 뜻은 1줄 이내의 형식으로 반환해줘.')
+            response = gemini_model.generate_content('다소 어려운, 요즘 시사 뉴스에서 흔히 볼 수 있는, 시사/경제 한글어휘들 20개를 [{"quiz_word" : "단어1", "mean" : "단어1에 대한 뜻풀이"}, {"quiz_word" : "단어2", "mean" : "단어2에 대한 뜻풀이"}, .... ] 와 같은 형태로 반환해줘. 뜻은 1줄 이내의 형식으로 반환해줘.')
             words_json = response.text
             print(words_json)
             
