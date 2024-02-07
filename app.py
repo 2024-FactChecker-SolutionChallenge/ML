@@ -519,7 +519,7 @@ def quiz_word():
             elif type(data_dict) == list:
                 result = data_dict
             
-            return jsonify(result)
+            return jsonify({"words" : result})
             
         except Exception as e:
             print("An error occurred:", e)
