@@ -26,6 +26,9 @@ import re
 from konlpy.tag import Okt
 from sklearn.metrics.pairwise import cosine_similarity
 
+from crawl_home import re_tag, art_crawl
+from tqdm import tqdm
+
 load_dotenv() 
 app = Flask(__name__)
 
@@ -116,7 +119,6 @@ def extract_video_id(url):
     except Exception as e:
         return print("extract_video_id_An error occurred:", e)
 
-
 def get_transcript(video_id):
     try:
         # Fetch the auto-generated Korean transcript
@@ -128,14 +130,16 @@ def get_transcript(video_id):
     except Exception as e:
         print("get_transcript_An error occurred:", e)  
 
+# gemini로 키워드 추출
 def get_keyword(title, script):
     try:
-        response = gemini_model.generate_content(title + "이 제목을 가진 유튜브 본문이 다음과 같아" + script + '이 제목 및 본문 내용의 "누가, 무엇을을 포함하는 핵심적인 중요한!! 내용을" 함축하면서도 연관성이 높은, 이 내용의 사실 여부를 따지기 위한 관련 뉴스 기사를 찾기 좋은 "1~2단어"로 된 검색어를 [ {"keyword" : ... } ] 형식으로 1개만 추출해줘')
+        response = gemini_model.generate_content(title + "이 제목을 가진 영상 대본 본문이 다음과 같아" + script + '이 제목 및 본문 내용의 요지를 함축하면서도 연관성이 높은, 이 영상의 사실 여부를 따지기 위한 관련 뉴스 기사를 찾기 좋은 "1~3단어!!!!!!!"로 된 검색어를 [ {"keyword" : ... } ] 형식으로 1개만 추출해줘')
         print(response.text)
         return response.text
     except Exception as e:
         print("get_keyword_An error occurred:", e)
 
+# 최신도 높은 기사 필터링
 def filter_current(news_titles, news_contents, date_dict):
     
     news_titles = news_titles.copy()
@@ -156,6 +160,9 @@ def filter_current(news_titles, news_contents, date_dict):
 
     while len(date_news_titles) < 8:
         for key, date in date_dict.items():
+            if len(date_news_titles) > 20:
+                return date_news_titles, date_news_contents
+            
             news_date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
             one_day_after = upload_date_kst + timedelta(days=(-2) * term)
             two_days_after = upload_date_kst + timedelta(days=3 * term)
@@ -165,12 +172,12 @@ def filter_current(news_titles, news_contents, date_dict):
                 if news_titles[index] not in date_news_titles:
                     date_news_titles.append(news_titles[index])
                     date_news_contents.append(news_contents[index])
-                    print(f"Key: {key}, Index: {index}")
 
         term += 1
 
     return date_news_titles, date_news_contents
 
+# 관련도 높은 기사 필터링
 def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
     
     news_titles = news_titles.copy()
@@ -185,6 +192,9 @@ def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
 
     while len(date_news_titles) < 8:
         for key, date in date_dict.items():
+            if len(date_news_titles) > 20:
+                return date_news_titles, date_news_contents
+            
             news_date = datetime.datetime.strptime(date, "%Y-%m-%d %H:%M:%S").replace(tzinfo=pytz.timezone('Asia/Seoul'))
             one_day_after = upload_date_kst + timedelta(days=(-2) * term)
             two_days_after = upload_date_kst + timedelta(days=3 * term)
@@ -194,7 +204,6 @@ def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
                 if news_titles[index] not in date_news_titles:
                     date_news_titles.append(news_titles[index])
                     date_news_contents.append(news_contents[index])
-                    print(f"Key: {key}, Index: {index}")
 
         term += 1  
     return date_news_titles, date_news_contents
@@ -289,6 +298,19 @@ def get_top_five(title_acc, keyword):
     
     return sorted_combined_scores
 
+
+def home_get_top_five(title_acc):
+    
+    title_acc = title_acc.copy()
+    
+    # 딕셔너리를 value 값에 따라 정렬
+    sorted_title_acc = dict(sorted(title_acc.items(), key=lambda item: item[1], reverse = True))
+
+    # 결합된 점수에 따라 정렬
+    sorted_scores = dict(sorted(sorted_title_acc.items(), key=lambda item: item[1], reverse=True))
+    
+    return sorted_scores
+
 @app.route('/youtubeNews/related', methods=['POST'])
 def youtubeNewsRelated():
     if request.method == 'POST':
@@ -368,18 +390,141 @@ def youtubeNewsRelated():
             print("★rel ... top5 완료\n")
             
             # 결과 출력
-            curr_top_5_combined = [{ "title" : key.strip().replace('\n', '').replace('\t', ''), "article" : curr_result_dict[key].strip().replace('\n', '').replace('\t', '') } for key in list(curr_sorted_combined_scores)[:5]]
-            rel_top_5_combined = [{ "title" : key.strip().replace('\n', '').replace('\t', ''), "article" : curr_result_dict[key].strip().replace('\n', '').replace('\t', '') } for key in list(rel_sorted_combined_scores)[:5]]
-            
-            result = {"curr_youtube_news" : curr_top_5_combined,
-                    "rel_youtube_news" : rel_top_5_combined
-                    }  # 예시 결과
+            curr_top_5_combined = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
+                                    "article": str(curr_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(),
+                                    "date" : str(date_dict[key]),
+                                    "credibility" : float(curr_sorted_combined_scores[key])}
+                                for key in list(curr_sorted_combined_scores)[:5]]
+            print("★curr_top_5_combined ... top5 완료\n")
+
+            rel_top_5_combined = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
+                                    "article": str(rel_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(),
+                                    "date" : str(date_dict[key]),
+                                    "credibility" : float(rel_sorted_combined_scores[key])} 
+                                for key in list(rel_sorted_combined_scores)[:5]]
+            print("★rel_top_5_combined ... top5 완료\n")
+
+            result = { "upload_date": str(upload_date_kst),
+                    "keyword" : keyword,
+                    "curr_youtube_news": curr_top_5_combined,
+                    "rel_youtube_news": rel_top_5_combined}  # 예시 결과
+
             
             return jsonify(result)
 
         except Exception as e:
             print("An error occurred:", e)
+            return jsonify({"error": str(e)}), 500
         
+@app.route('/interests', methods=['POST'])
+def interests():
+    if request.method == 'POST':
+        try: 
+            all_hrefs = {}
+            sids = [i for i in range(100,106)]  # 분야 리스트
+
+            # 각 분야별로 링크 수집해서 딕셔너리에 저장
+            for sid in sids:
+                sid_data = re_tag(sid)
+                all_hrefs[sid] = sid_data
+            
+            # 모든 섹션의 데이터 수집 (제목, 날짜, 본문, section, url)
+            section_lst = [s for s in range(100, 106)]
+            artdic_lst = []
+
+            for section in tqdm(section_lst, desc="Processing sections"):
+                for i in range(len(all_hrefs[section][:40])):
+                    if  "news.naver.com" in all_hrefs[section][i]:
+                        art_dic = art_crawl(all_hrefs, section, i)
+                        art_dic["section"] = section
+                        art_dic["url"] = all_hrefs[section][i]
+                        artdic_lst.append(art_dic)
+                    
+            print("★ home_크롤링 완료")
+            
+            # title이 main인 딕셔너리 생성
+            title_main_dict = {item['title']: item['main'] for item in artdic_lst}
+            # title이 date인 딕셔너리 생성
+            title_date_dict = {item['title']: item['date'] for item in artdic_lst}
+            title_section_dict = {item['title']: item['section'] for item in artdic_lst}
+
+            home_title_acc = {}
+            home_title_embedding = {}
+
+            for news in artdic_lst:
+                input_text = remove_stopwords(preprocess_text(news['title']))
+                home_input_embedding = get_bert_embedding(input_text)
+
+                # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
+                if len(home_input_embedding.shape) == 1:
+                    home_input_embedding = np.reshape(home_input_embedding, (1, -1))
+
+                # 모델을 사용한 예측 수행
+                home_predictions = acc_model.predict(home_input_embedding)
+                
+                home_title_acc[news['title']] = home_predictions
+                home_title_embedding[news['title']] = home_input_embedding
+
+            print("home_예측 완료")
+            
+            home_sorted_scores = home_get_top_five(home_title_acc)
+            # keyword 필요없는 새로운 함수 만들기
+            print("★ home_top5완료")
+
+            result = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
+                        "article": str(title_main_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(),
+                        "date" : str(title_date_dict [key]),
+                        "credibility" : float(home_sorted_scores[key]),
+                        "section" : title_section_dict[key]}
+                    for key in list(home_sorted_scores)]
+            
+            result = [news for news in result if news["article"] != ''] 
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            print("An error occurred:", e)
+            return jsonify({"error": str(e)}), 500
+        
+@app.route('/feedback', methods=['POST'])
+def feedback():
+    if request.method == 'POST':
+        try: 
+            data = request.json  # 클라이언트에서 보낸 데이터를 JSON 형태로 받음
+            article = data['article'] 
+            summary = data['summary']
+            
+            response = gemini_model.generate_content(article + "이 본문을 가지고 요약을 1~3줄로 다음과 같이 해봤어 : " + summary + '이 기사 내용을 잘 요약한건지 3~4줄로 피드백을 해주고 더 나은 요약을 제공해줘')
+            result = {"feedback" : response.text}
+            return jsonify(result)
+            
+        except Exception as e:
+            print("An error occurred:", e)
+            return jsonify({"error": str(e)}), 500
+        
+@app.route('/study/daily-quiz/quiz-word', methods=['GET'])
+def quiz_word():
+    if request.method == 'GET':
+        try:
+            response = gemini_model.generate_content('다소 어려운, 요즘 시사 뉴스에서 흔히 볼 수 있는, 시사/경제 한글어휘들 20개를 [{"딘어1" : "단어1에 대한 뜻풀이"}, {"단어2 : "단어2에 대한 뜻풀이"}, .... ] 와 같이 하나의 리스트 안에 key 값은 단어로 가지고 value 값은 뜻으로 가지는 형태로 반환해줘. 뜻은 1줄 이내의 형식으로 반환해줘.')
+            words_json = response.text
+            print(words_json)
+            
+            data_dict = ast.literal_eval(words_json)
+            print(data_dict)
+            print(type(data_dict))
+            
+            if type(data_dict) == dict:
+                result = [data_dict]
+            elif type(data_dict) == list:
+                result = data_dict
+            
+            return jsonify(result)
+            
+        except Exception as e:
+            print("An error occurred:", e)
+            return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
