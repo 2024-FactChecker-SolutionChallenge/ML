@@ -577,6 +577,10 @@ def quiz_word():
                 result = [data_dict]
             elif type(data_dict) == list:
                 result = data_dict
+                
+            # 여기서 각 단어에 id를 부여함
+            for index, item in enumerate(result):
+                item['id'] = index
             
             return jsonify({"words" : result})
             
