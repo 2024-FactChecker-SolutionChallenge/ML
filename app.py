@@ -180,6 +180,8 @@ def filter_current(news_titles, news_contents, date_dict):
 # 관련도 높은 기사 필터링
 def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
     
+    print("유튜브 업로드 날짜 : ", upload_date_kst)
+    
     news_titles = news_titles.copy()
     news_contents = news_contents.copy()
     date_dict = date_dict.copy()
@@ -271,6 +273,33 @@ def get_bert_embedding(text):
     except Exception as e:
         print("get_bert_embedding: An error occurred:", e)
 
+def get_batch_bert_embedding(texts):
+    try:
+        print(f"Processing {len(texts)} texts...")  # 배치 크기 출력
+
+        # 배치 단위로 토큰화
+        batch = tokenizer(texts, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
+        # batch.to(device) # GPU 사용 시 활성화
+
+        print("Tokenization completed, starting embeddings calculation...")
+
+        # 배치 단위로 BERT 모델을 통해 임베딩 생성
+        with torch.no_grad():
+            outputs = bert_model(**batch)
+
+        embeddings = outputs.last_hidden_state
+        mask = batch['attention_mask'].unsqueeze(-1).expand(embeddings.size()).float()
+        masked_embeddings = embeddings * mask
+        summed = torch.sum(masked_embeddings, 1)
+        count = torch.clamp(mask.sum(1), min=1e-9)
+        mean_pooled = summed / count
+
+        print("Embeddings calculation completed.")
+
+        return mean_pooled.detach().cpu().numpy()
+    except Exception as e:
+        print("get_batch_bert_embedding: An error occurred:", e)
+
     
 def get_top_five(title_acc, keyword):
     
@@ -354,51 +383,81 @@ def youtubeNewsRelated():
             rel_title_acc = {}
             rel_title_embedding = {}
 
-            for title in curr_result_dict.keys():
-                curr_input_text = remove_stopwords(preprocess_text(title))
-                curr_input_embedding = get_bert_embedding(curr_input_text)
+            # for title in curr_result_dict.keys():
+            #     curr_input_text = remove_stopwords(preprocess_text(title))
+            #     curr_input_embedding = get_bert_embedding(curr_input_text)
 
-                # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-                if len(curr_input_embedding.shape) == 1:
-                    curr_input_embedding = np.reshape(curr_input_embedding, (1, -1))
+            #     # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
+            #     if len(curr_input_embedding.shape) == 1:
+            #         curr_input_embedding = np.reshape(curr_input_embedding, (1, -1))
 
-                # 모델을 사용한 예측 수행
-                curr_predictions = acc_model.predict(curr_input_embedding)
+            #     # 모델을 사용한 예측 수행
+            #     curr_predictions = acc_model.predict(curr_input_embedding)
 
-                curr_title_acc[title] = curr_predictions
-                curr_title_embedding[title] = curr_input_embedding
+            #     curr_title_acc[title] = curr_predictions
+            #     curr_title_embedding[title] = curr_input_embedding
+                
+            # 예측을 수행할 텍스트의 리스트
+            titles = list(curr_result_dict.keys())
+            # 전처리 및 불용어 제거
+            processed_titles = [remove_stopwords(preprocess_text(title)) for title in titles]
+            # 배치 단위 임베딩
+            batch_embeddings = get_batch_bert_embedding(processed_titles)
+
+            # 배치 단위로 예측 수행
+            predictions = acc_model.predict(batch_embeddings)
+
+            # 결과 저장
+            for title, prediction, embedding in zip(titles, predictions, batch_embeddings):
+                curr_title_acc[title] = prediction
+                curr_title_embedding[title] = embedding
             print("★curr ... 신뢰도 예측 완료\n")
             
-            for title in rel_result_dict.keys():
-                rel_input_text = remove_stopwords(preprocess_text(title))
-                rel_input_embedding = get_bert_embedding(rel_input_text)
+            # for title in rel_result_dict.keys():
+            #     rel_input_text = remove_stopwords(preprocess_text(title))
+            #     rel_input_embedding = get_bert_embedding(rel_input_text)
 
-                # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-                if len(rel_input_embedding.shape) == 1:
-                    rel_input_embedding = np.reshape(rel_input_embedding, (1, -1))
+            #     # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
+            #     if len(rel_input_embedding.shape) == 1:
+            #         rel_input_embedding = np.reshape(rel_input_embedding, (1, -1))
 
-                # 모델을 사용한 예측 수행
-                rel_predictions = acc_model.predict(rel_input_embedding)
+            #     # 모델을 사용한 예측 수행
+            #     rel_predictions = acc_model.predict(rel_input_embedding)
 
-                rel_title_acc[title] = rel_predictions
-                rel_title_embedding[title] = rel_input_embedding
+            #     rel_title_acc[title] = rel_predictions
+            #     rel_title_embedding[title] = rel_input_embedding
+            # 예측을 수행할 텍스트의 리스트
+            titles = list(rel_result_dict.keys())
+            # 전처리 및 불용어 제거
+            processed_titles = [remove_stopwords(preprocess_text(title)) for title in titles]
+            # 배치 단위 임베딩
+            batch_embeddings = get_batch_bert_embedding(processed_titles)
+
+            # 배치 단위로 예측 수행
+            predictions = acc_model.predict(batch_embeddings)
+
+            # 결과 저장
+            for title, prediction, embedding in zip(titles, predictions, batch_embeddings):
+                rel_title_acc[title] = prediction
+                rel_title_embedding[title] = embedding
             print("★rel ... 신뢰도 예측 완료\n")
             
             curr_sorted_combined_scores = get_top_five(curr_title_acc, keyword)
             print("★curr ... top5 완료\n")
             rel_sorted_combined_scores = get_top_five(rel_title_acc, keyword)
             print("★rel ... top5 완료\n")
+
             
             # 결과 출력
             curr_top_5_combined = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
-                                    "article": str(curr_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(),
+                                    "article": str(" ".join(map(str, curr_result_dict[key])) if isinstance(curr_result_dict[key], list) else str(curr_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip())[curr_result_dict[key].find('[') + 1: curr_result_dict[key].rfind(']')],
                                     "date" : str(date_dict[key]),
                                     "credibility" : float(curr_sorted_combined_scores[key])}
                                 for key in list(curr_sorted_combined_scores)[:5]]
             print("★curr_top_5_combined ... top5 완료\n")
 
             rel_top_5_combined = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
-                                    "article": str(rel_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(),
+                                    "article": str(" ".join(map(str, rel_result_dict[key])) if isinstance(rel_result_dict[key], list) else str(rel_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip())[rel_result_dict[key].find('[') + 1 : rel_result_dict[key].rfind(']')],
                                     "date" : str(date_dict[key]),
                                     "credibility" : float(rel_sorted_combined_scores[key])} 
                                 for key in list(rel_sorted_combined_scores)[:5]]
@@ -451,19 +510,19 @@ def interests():
             home_title_acc = {}
             home_title_embedding = {}
 
-            for news in artdic_lst:
-                input_text = remove_stopwords(preprocess_text(news['title']))
-                home_input_embedding = get_bert_embedding(input_text)
+            # 뉴스 제목들을 리스트로 변환
+            news_titles = [remove_stopwords(preprocess_text(news['title'])) for news in artdic_lst]
 
-                # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-                if len(home_input_embedding.shape) == 1:
-                    home_input_embedding = np.reshape(home_input_embedding, (1, -1))
+            # 배치 임베딩 계산
+            batch_embeddings = get_batch_bert_embedding(news_titles)
 
-                # 모델을 사용한 예측 수행
-                home_predictions = acc_model.predict(home_input_embedding)
-                
-                home_title_acc[news['title']] = home_predictions
-                home_title_embedding[news['title']] = home_input_embedding
+            # 예측 수행
+            predictions = acc_model.predict(batch_embeddings)
+
+            # 결과 저장
+            for i, news in enumerate(artdic_lst):
+                home_title_acc[news['title']] = predictions[i]
+                home_title_embedding[news['title']] = batch_embeddings[i]
 
             print("home_예측 완료")
             
