@@ -463,7 +463,8 @@ def youtubeNewsRelated():
                                 for key in list(rel_sorted_combined_scores)[:5]]
             print("★rel_top_5_combined ... top5 완료\n")
 
-            result = { "upload_date": str(upload_date_kst),
+            result = { "yt_title" : str(title), 
+                    "upload_date": str(upload_date_kst),
                     "keyword" : keyword,
                     "curr_youtube_news": curr_top_5_combined,
                     "rel_youtube_news": rel_top_5_combined}  # 예시 결과
