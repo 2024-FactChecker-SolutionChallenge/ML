@@ -44,7 +44,7 @@ bert_model = BertModel.from_pretrained(model_name)
 bert_model.to(device)  # 모델을 GPU로 이동
 
 # Gemini
-genai.configure(api_key= os.getenv("AIzaSyByBjFjgk5KclA9lOkv_B91T21DQUkFbCE"))
+genai.configure(api_key= os.getenv("API_KEY"))
 
 safety_settings = [
     {
