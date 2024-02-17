@@ -350,7 +350,7 @@ def youtubeNewsRelated():
             youtube_url = data['url'] 
         
             
-            title = get_youtube_title(youtube_url)
+            yt_title = get_youtube_title(youtube_url)
             upload_date_kst = get_upload_date(youtube_url)
             video_id = extract_video_id(youtube_url)
             script = get_transcript(video_id)
@@ -360,7 +360,7 @@ def youtubeNewsRelated():
 
             for attempt in range(max_retries):
                 try:
-                    keyword_json = get_keyword(title, script)
+                    keyword_json = get_keyword(yt_title, script)
                     break  # 성공하면 반복문 탈출
                 except Exception as e:
                     print(f"시도 {attempt + 1}/{max_retries}: 에러 발생 - {e}")
@@ -479,7 +479,7 @@ def youtubeNewsRelated():
                                 for key in list(rel_sorted_combined_scores)[:5]]
             print("★rel_top_5_combined ... top5 완료\n")
 
-            result = { "yt_title" : str(title), 
+            result = { "yt_title" : str(yt_title), 
                     "upload_date": str(upload_date_kst),
                     "keyword" : keyword,
                     "curr_youtube_news": curr_top_5_combined,
