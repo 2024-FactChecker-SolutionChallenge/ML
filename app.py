@@ -493,7 +493,7 @@ def interests():
             artdic_lst = []
 
             for section in tqdm(section_lst, desc="Processing sections"):
-                for i in range(len(all_hrefs[section][:40])):
+                for i in range(len(all_hrefs[section][:20])):
                     if  "news.naver.com" in all_hrefs[section][i]:
                         art_dic = art_crawl(all_hrefs, section, i)
                         art_dic["section"] = section
