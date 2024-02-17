@@ -29,6 +29,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 from crawl_home import re_tag, art_crawl
 from tqdm import tqdm
 
+import time
+
 load_dotenv() 
 app = Flask(__name__)
 
@@ -352,7 +354,21 @@ def youtubeNewsRelated():
             upload_date_kst = get_upload_date(youtube_url)
             video_id = extract_video_id(youtube_url)
             script = get_transcript(video_id)
-            keyword_json = get_keyword(title, script)
+            
+            max_retries = 10  # 최대 재시도 횟수
+            retry_delay = 2  # 재시도 사이의 대기 시간 (초)
+
+            for attempt in range(max_retries):
+                try:
+                    keyword_json = get_keyword(title, script)
+                    break  # 성공하면 반복문 탈출
+                except Exception as e:
+                    print(f"시도 {attempt + 1}/{max_retries}: 에러 발생 - {e}")
+                    time.sleep(retry_delay)  # 잠시 대기
+            else:
+                # 모든 시도가 실패했을 경우
+                print(f"{max_retries}회 시도 후에도 성공하지 못했습니다.")
+                keyword_json = None  # 또는 다른 기본값 설정
             
             data_dict = ast.literal_eval(keyword_json)
             if type(data_dict) == dict:
