@@ -348,14 +348,25 @@ def youtubeNewsRelated():
         try: 
             data = request.json  # 클라이언트에서 보낸 데이터를 JSON 형태로 받음
             youtube_url = data['url'] 
-        
+            
+            if 'youtu.be' in youtube_url:
+                # YouTube ID 추출
+                video_id = youtube_url.split('/')[-1].split('?')[0]
+
+                # 선택적 파라미터 추출 (예: si=vgh2KyTmamG8adPz)
+                params = ''
+                if '?' in youtube_url and '&' in youtube_url.split('?')[1]:
+                    params = '&' + youtube_url.split('?')[1]
+
+                # 웹 링크 형식으로 조합
+                youtube_url = f"https://youtube.com/watch?v={video_id}{params}"
             
             yt_title = get_youtube_title(youtube_url)
             upload_date_kst = get_upload_date(youtube_url)
             video_id = extract_video_id(youtube_url)
             script = get_transcript(video_id)
             
-            max_retries = 10  # 최대 재시도 횟수
+            max_retries = 1  # 최대 재시도 횟수
             retry_delay = 2  # 재시도 사이의 대기 시간 (초)
 
             for attempt in range(max_retries):
@@ -377,19 +388,24 @@ def youtubeNewsRelated():
                 keyword = data_dict[0]["keyword"]
                 
             print("★제목, 업로드 날짜, 대본, 키워드 추출 완료\n")
+            print(yt_title)
                 
             final_urls = crawl_urls(keyword)
             print("★url 목록들 받아오기 완료\n")
+            print(yt_title)
             
             news_titles, news_contents, news_dates = crawl_news(final_urls)  
             print("★크롤링 완료\n")
+            print(yt_title)
             
             date_dict = dict(zip(news_titles, news_dates)) 
             
             curr_date_news_titles, curr_date_news_contents = filter_current(news_titles, news_contents, date_dict) 
             print("★curr ... 날짜 기반 필터링 완료\n") 
             rel_date_news_titles, rel_date_news_contents = filter_related(news_titles, news_contents, date_dict, upload_date_kst)
-            print("★rel ... 날짜 기반 필터링 완료\n")    
+            print("★rel ... 날짜 기반 필터링 완료\n")   
+            
+            print(yt_title) 
             
             curr_result_dict = dict(zip(curr_date_news_titles, curr_date_news_contents))
             rel_result_dict = dict(zip(rel_date_news_titles, rel_date_news_contents))
@@ -458,10 +474,14 @@ def youtubeNewsRelated():
                 rel_title_embedding[title] = embedding
             print("★rel ... 신뢰도 예측 완료\n")
             
+            print(yt_title)
+            
             curr_sorted_combined_scores = get_top_five(curr_title_acc, keyword)
             print("★curr ... top5 완료\n")
             rel_sorted_combined_scores = get_top_five(rel_title_acc, keyword)
             print("★rel ... top5 완료\n")
+            
+            print(yt_title)
 
             
             # 결과 출력
@@ -478,6 +498,8 @@ def youtubeNewsRelated():
                                     "credibility" : float(rel_sorted_combined_scores[key])} 
                                 for key in list(rel_sorted_combined_scores)[:5]]
             print("★rel_top_5_combined ... top5 완료\n")
+            
+            print(yt_title)
 
             result = { "yt_title" : str(yt_title), 
                     "upload_date": str(upload_date_kst),
