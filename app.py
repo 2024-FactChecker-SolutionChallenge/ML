@@ -34,18 +34,13 @@ import time
 load_dotenv() 
 app = Flask(__name__)
 
-# GPU 사용 설정
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# 기본적 모델 불러오기
-
-# KoBERT 모델과 토크나이저 로드
 model_name = 'kykim/bert-kor-base'
 tokenizer = BertTokenizer.from_pretrained(model_name)
 bert_model = BertModel.from_pretrained(model_name)
-bert_model.to(device)  # 모델을 GPU로 이동
+bert_model.to(device) 
 
-# Gemini
 genai.configure(api_key= os.getenv("API_KEY"))
 
 safety_settings = [
@@ -69,33 +64,24 @@ safety_settings = [
 
 gemini_model = genai.GenerativeModel('gemini-pro',safety_settings = safety_settings)
 
-# 신뢰도 판단 모델 가중치
 acc_model = load_model('./model.h5')
 
-# youtube url에서 제목/업로드일자/자막 추출
 def get_youtube_title(youtube_url):
     try:
-        # 유튜브 영상 정보 가져오기
         with youtube_dl.YoutubeDL() as ydl:
             info = ydl.extract_info(youtube_url, download=False)
 
-        # 유튜브 영상 제목 반환
         return info.get('title', '제목을 찾을 수 없습니다.')
     except Exception as e:
         return print("get_youtube_title_An error occurred:", e)
 
-# youtube url에서 업로드 일자 추출
 def get_upload_date(youtube_url):
     try:
-        # 유튜브 URL 입력
         url = youtube_url
 
-        # YouTube 객체 생성
         youtube = YouTube(url)
 
-        # 업로드 일자 추출
         upload_date = youtube.publish_date
-        # 한국 시간으로 변환 (옵션)
         KST = datetime.timezone(datetime.timedelta(hours=9))
         upload_date_kst = upload_date.astimezone(KST)
         
@@ -103,18 +89,14 @@ def get_upload_date(youtube_url):
     except Exception as e:
         return print("get_upload_date_An error occurred:", e)  
 
-# youtube url로 id 추출, 대본 추출
 def extract_video_id(url):
     try:
-        # Parse the URL
         parsed_url = urlparse(url)
-        # Extract query parameters
         query_params = parse_qs(parsed_url.query)
-        # Get the video ID from query parameters (the 'v' parameter)
         video_id = query_params.get("v")
 
         if video_id:
-            return video_id[0]  # 'v' parameter is a list, so we take the first item
+            return video_id[0]  
         else:
             return "No video ID found in URL"
         
@@ -123,7 +105,6 @@ def extract_video_id(url):
 
 def get_transcript(video_id):
     try:
-        # Fetch the auto-generated Korean transcript
         transcripts = YouTubeTranscriptApi.get_transcript(video_id, languages=['ko'])
         script = ""
         for transcript in transcripts:
@@ -132,7 +113,6 @@ def get_transcript(video_id):
     except Exception as e:
         print("get_transcript_An error occurred:", e)  
 
-# gemini로 키워드 추출
 def get_keyword(title, script):
     try:
         response = gemini_model.generate_content(title + "이 제목을 가진 영상 대본 본문이 다음과 같아" + script + '이 제목 및 본문 내용의 요지를 함축하면서도 연관성이 높은, 이 영상의 사실 여부를 따지기 위한 관련 뉴스 기사를 찾기 좋은 "1~3단어!!!!!!!"로 된 검색어를 [ {"keyword" : ... } ] 형식으로 1개만 추출해줘')
@@ -141,7 +121,6 @@ def get_keyword(title, script):
     except Exception as e:
         print("get_keyword_An error occurred:", e)
 
-# 최신도 높은 기사 필터링
 def filter_current(news_titles, news_contents, date_dict):
     
     news_titles = news_titles.copy()
@@ -179,7 +158,6 @@ def filter_current(news_titles, news_contents, date_dict):
 
     return date_news_titles, date_news_contents
 
-# 관련도 높은 기사 필터링
 def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
     
     print("유튜브 업로드 날짜 : ", upload_date_kst)
@@ -212,22 +190,17 @@ def filter_related(news_titles, news_contents, date_dict, upload_date_kst):
         term += 1  
     return date_news_titles, date_news_contents
 
-
-# 한글이 아닌 문자 제거 함수
 def clean_text(text):
     text = re.sub('[^가-힣\s]', '', text)
     return text
 
-# 형태소 분석기 초기화
 okt = Okt()
 
-# 텍스트 전처리 함수
 def preprocess_text(text):
-    text = clean_text(text)  # 텍스트 정제
-    tokenized = okt.morphs(text)  # 형태소 분석
+    text = clean_text(text)  
+    tokenized = okt.morphs(text)  
     return ' '.join(tokenized)
 
-# 불용어 제거 (stopwords 리스트를 만들어 사용)
 stopwords = [
     '아', '휴', '아이구', '아이쿠', '아이고', '어', '나', '우리', '저희', '따라', '의해', '을', '를', '에', '의', '가',
     '으로', '로', '에게', '뿐이다', '의거하여', '근거하여', '입각하여', '기준으로', '예하면', '예를 들면', '예를 들자면',
@@ -255,15 +228,12 @@ def remove_stopwords(text):
     filtered_words = [word for word in words if word not in stopwords]
     return ' '.join(filtered_words)
 
-# 임베딩을 생성하는 함수
 def get_bert_embedding(text):
     try:
         inputs = tokenizer(text, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-        # inputs.to(device) 라인 제거 - GPU 사용하지 않음
 
         outputs = bert_model(**inputs)
 
-        # 나머지 부분은 동일하게 유지
         embeddings = outputs.last_hidden_state
         mask = inputs['attention_mask'].unsqueeze(-1).expand(embeddings.size()).float()
         masked_embeddings = embeddings * mask
@@ -271,21 +241,18 @@ def get_bert_embedding(text):
         count = torch.clamp(mask.sum(1), min=1e-9)
         mean_pooled = summed / count
 
-        return mean_pooled[0].detach().cpu().numpy()  # 결과를 CPU로 이동 (이미 CPU에서 실행 중이므로 필요 없으나 명시적으로 남겨둠)
+        return mean_pooled[0].detach().cpu().numpy() 
     except Exception as e:
         print("get_bert_embedding: An error occurred:", e)
 
 def get_batch_bert_embedding(texts):
     try:
-        print(f"Processing {len(texts)} texts...")  # 배치 크기 출력
+        print(f"Processing {len(texts)} texts...") 
 
-        # 배치 단위로 토큰화
         batch = tokenizer(texts, return_tensors='pt', max_length=512, truncation=True, padding='max_length')
-        # batch.to(device) # GPU 사용 시 활성화
 
         print("Tokenization completed, starting embeddings calculation...")
 
-        # 배치 단위로 BERT 모델을 통해 임베딩 생성
         with torch.no_grad():
             outputs = bert_model(**batch)
 
@@ -307,24 +274,19 @@ def get_top_five(title_acc, keyword):
     
     title_acc = title_acc.copy()
     
-    # 딕셔너리를 value 값에 따라 정렬
     sorted_title_acc = dict(sorted(title_acc.items(), key=lambda item: item[1], reverse = True))
     keyword_embedding = get_bert_embedding(keyword).reshape(1, -1)
 
-    # α 값을 설정 (예: 0.5)
     alpha = 0.8
 
-    # 최종 점수를 계산하고 저장
     combined_scores = {}
     for title in sorted_title_acc.keys():
         title_embedding = get_bert_embedding(title).reshape(1, -1)
         similarity = cosine_similarity(keyword_embedding, title_embedding)[0][0]
 
-        # 정규화된 정확도와 유사도를 결합
         combined_score = alpha * similarity + (1 - alpha) * title_acc[title]
         combined_scores[title] = combined_score
-
-    # 결합된 점수에 따라 정렬
+        
     sorted_combined_scores = dict(sorted(combined_scores.items(), key=lambda item: item[1], reverse=True))
     
     return sorted_combined_scores
@@ -334,10 +296,8 @@ def home_get_top_five(title_acc):
     
     title_acc = title_acc.copy()
     
-    # 딕셔너리를 value 값에 따라 정렬
     sorted_title_acc = dict(sorted(title_acc.items(), key=lambda item: item[1], reverse = True))
 
-    # 결합된 점수에 따라 정렬
     sorted_scores = dict(sorted(sorted_title_acc.items(), key=lambda item: item[1], reverse=True))
     
     return sorted_scores
@@ -346,19 +306,16 @@ def home_get_top_five(title_acc):
 def youtubeNewsRelated():
     if request.method == 'POST':
         try: 
-            data = request.json  # 클라이언트에서 보낸 데이터를 JSON 형태로 받음
+            data = request.json  
             youtube_url = data['url'] 
             
             if 'youtu.be' in youtube_url:
-                # YouTube ID 추출
                 video_id = youtube_url.split('/')[-1].split('?')[0]
 
-                # 선택적 파라미터 추출 (예: si=vgh2KyTmamG8adPz)
                 params = ''
                 if '?' in youtube_url and '&' in youtube_url.split('?')[1]:
                     params = '&' + youtube_url.split('?')[1]
 
-                # 웹 링크 형식으로 조합
                 youtube_url = f"https://youtube.com/watch?v={video_id}{params}"
             
             yt_title = get_youtube_title(youtube_url)
@@ -366,20 +323,18 @@ def youtubeNewsRelated():
             video_id = extract_video_id(youtube_url)
             script = get_transcript(video_id)
             
-            max_retries = 1  # 최대 재시도 횟수
-            retry_delay = 2  # 재시도 사이의 대기 시간 (초)
-
+            max_retries = 1  
+            retry_delay = 2  
             for attempt in range(max_retries):
                 try:
                     keyword_json = get_keyword(yt_title, script)
-                    break  # 성공하면 반복문 탈출
+                    break 
                 except Exception as e:
                     print(f"시도 {attempt + 1}/{max_retries}: 에러 발생 - {e}")
-                    time.sleep(retry_delay)  # 잠시 대기
+                    time.sleep(retry_delay)
             else:
-                # 모든 시도가 실패했을 경우
                 print(f"{max_retries}회 시도 후에도 성공하지 못했습니다.")
-                keyword_json = None  # 또는 다른 기본값 설정
+                keyword_json = None 
             
             data_dict = ast.literal_eval(keyword_json)
             if type(data_dict) == dict:
@@ -414,61 +369,24 @@ def youtubeNewsRelated():
             curr_title_embedding = {}
             rel_title_acc = {}
             rel_title_embedding = {}
-
-            # for title in curr_result_dict.keys():
-            #     curr_input_text = remove_stopwords(preprocess_text(title))
-            #     curr_input_embedding = get_bert_embedding(curr_input_text)
-
-            #     # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-            #     if len(curr_input_embedding.shape) == 1:
-            #         curr_input_embedding = np.reshape(curr_input_embedding, (1, -1))
-
-            #     # 모델을 사용한 예측 수행
-            #     curr_predictions = acc_model.predict(curr_input_embedding)
-
-            #     curr_title_acc[title] = curr_predictions
-            #     curr_title_embedding[title] = curr_input_embedding
                 
-            # 예측을 수행할 텍스트의 리스트
             titles = list(curr_result_dict.keys())
-            # 전처리 및 불용어 제거
             processed_titles = [remove_stopwords(preprocess_text(title)) for title in titles]
-            # 배치 단위 임베딩
             batch_embeddings = get_batch_bert_embedding(processed_titles)
-
-            # 배치 단위로 예측 수행
+            
             predictions = acc_model.predict(batch_embeddings)
 
-            # 결과 저장
             for title, prediction, embedding in zip(titles, predictions, batch_embeddings):
                 curr_title_acc[title] = prediction
                 curr_title_embedding[title] = embedding
             print("★curr ... 신뢰도 예측 완료\n")
             
-            # for title in rel_result_dict.keys():
-            #     rel_input_text = remove_stopwords(preprocess_text(title))
-            #     rel_input_embedding = get_bert_embedding(rel_input_text)
-
-            #     # 입력 데이터가 올바른 형태인지 확인하고 필요한 경우 형태 변환
-            #     if len(rel_input_embedding.shape) == 1:
-            #         rel_input_embedding = np.reshape(rel_input_embedding, (1, -1))
-
-            #     # 모델을 사용한 예측 수행
-            #     rel_predictions = acc_model.predict(rel_input_embedding)
-
-            #     rel_title_acc[title] = rel_predictions
-            #     rel_title_embedding[title] = rel_input_embedding
-            # 예측을 수행할 텍스트의 리스트
             titles = list(rel_result_dict.keys())
-            # 전처리 및 불용어 제거
             processed_titles = [remove_stopwords(preprocess_text(title)) for title in titles]
-            # 배치 단위 임베딩
             batch_embeddings = get_batch_bert_embedding(processed_titles)
 
-            # 배치 단위로 예측 수행
             predictions = acc_model.predict(batch_embeddings)
 
-            # 결과 저장
             for title, prediction, embedding in zip(titles, predictions, batch_embeddings):
                 rel_title_acc[title] = prediction
                 rel_title_embedding[title] = embedding
@@ -483,8 +401,6 @@ def youtubeNewsRelated():
             
             print(yt_title)
 
-            
-            # 결과 출력
             curr_top_5_combined = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
                                     "article": str(" ".join(map(str, curr_result_dict[key])) if isinstance(curr_result_dict[key], list) else str(curr_result_dict[key]).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip())[curr_result_dict[key].find('[') + 1: curr_result_dict[key].rfind(']')],
                                     "date" : str(date_dict[key]),
@@ -505,7 +421,7 @@ def youtubeNewsRelated():
                     "upload_date": str(upload_date_kst),
                     "keyword" : keyword,
                     "curr_youtube_news": curr_top_5_combined,
-                    "rel_youtube_news": rel_top_5_combined}  # 예시 결과
+                    "rel_youtube_news": rel_top_5_combined}  
 
             
             return jsonify(result)
@@ -519,14 +435,12 @@ def interests():
     if request.method == 'GET':
         try: 
             all_hrefs = {}
-            sids = [i for i in range(100,106)]  # 분야 리스트
+            sids = [i for i in range(100,106)] 
 
-            # 각 분야별로 링크 수집해서 딕셔너리에 저장
             for sid in sids:
                 sid_data = re_tag(sid)
                 all_hrefs[sid] = sid_data
             
-            # 모든 섹션의 데이터 수집 (제목, 날짜, 본문, section, url)
             section_lst = [s for s in range(100, 106)]
             artdic_lst = []
 
@@ -540,25 +454,19 @@ def interests():
                     
             print("★ home_크롤링 완료")
             
-            # title이 main인 딕셔너리 생성
             title_main_dict = {item['title']: item['main'] for item in artdic_lst}
-            # title이 date인 딕셔너리 생성
             title_date_dict = {item['title']: item['date'] for item in artdic_lst}
             title_section_dict = {item['title']: item['section'] for item in artdic_lst}
 
             home_title_acc = {}
             home_title_embedding = {}
 
-            # 뉴스 제목들을 리스트로 변환
             news_titles = [remove_stopwords(preprocess_text(news['title'])) for news in artdic_lst]
 
-            # 배치 임베딩 계산
             batch_embeddings = get_batch_bert_embedding(news_titles)
 
-            # 예측 수행
             predictions = acc_model.predict(batch_embeddings)
 
-            # 결과 저장
             for i, news in enumerate(artdic_lst):
                 home_title_acc[news['title']] = predictions[i]
                 home_title_embedding[news['title']] = batch_embeddings[i]
@@ -566,7 +474,6 @@ def interests():
             print("home_예측 완료")
             
             home_sorted_scores = home_get_top_five(home_title_acc)
-            # keyword 필요없는 새로운 함수 만들기
             print("★ home_top5완료")
 
             result = [{ "title": str(key).replace('"', ' ').replace('\n', ' ').replace('\t', ' ').strip(), 
@@ -588,7 +495,7 @@ def interests():
 def feedback():
     if request.method == 'POST':
         try: 
-            data = request.json  # 클라이언트에서 보낸 데이터를 JSON 형태로 받음
+            data = request.json 
             article = data['article'] 
             summary = data['summary']
             
@@ -617,7 +524,6 @@ def quiz_word():
             elif type(data_dict) == list:
                 result = data_dict
                 
-            # 여기서 각 단어에 id를 부여함
             for index, item in enumerate(result):
                 item['id'] = index
             
